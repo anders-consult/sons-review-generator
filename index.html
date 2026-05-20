@@ -577,8 +577,8 @@ function parseReviews(raw) {
     if (parsed.reviews && Array.isArray(parsed.reviews) && parsed.reviews.length >= 3) {
       return parsed.reviews.map(r =>
         typeof r === 'string'
-          ? { title: '', de: stripDashes(r), en: '' }
-          : { title: r.title || '', de: stripDashes(r.de || ''), en: stripDashes(r.en || '') }
+          ? { title: '', title_en: '', de: stripDashes(r), en: '' }
+          : { title: r.title || '', title_en: r.title_en || '', de: stripDashes(r.de || ''), en: stripDashes(r.en || '') }
       );
     }
   } catch(e) {}
@@ -590,7 +590,7 @@ function parseReviews(raw) {
   const deList = extractAll(result, /"de"\s*:\s*"((?:[^"\\]|\\.)*)"/g);
   const enList = extractAll(result, /"en"\s*:\s*"((?:[^"\\]|\\.)*)"/g);
   if (deList.length >= 3) {
-    return deList.slice(0,3).map((de, i) => ({ title: '', de: stripDashes(de), en: stripDashes(enList[i] || '') }));
+    return deList.slice(0,3).map((de, i) => ({ title: '', title_en: '', de: stripDashes(de), en: stripDashes(enList[i] || '') }));
   }
   throw new Error('Could not read response — please try again.');
 }
@@ -625,7 +625,7 @@ Anforderungen:
 - Setze KEIN Komma vor "und". Schreibe niemals ", und".
 
 Antworte NUR mit validem JSON:
-{"reviews": [{"title": "Kurzer Bewertungstitel 1", "de": "Text 1", "en": "Translation 1"}, {"title": "Kurzer Bewertungstitel 2", "de": "Text 2", "en": "Translation 2"}, {"title": "Kurzer Bewertungstitel 3", "de": "Text 3", "en": "Translation 3"}]}`;
+{"reviews": [{"title": "Deutscher Titel 1", "title_en": "English Title 1", "de": "Text 1", "en": "Translation 1"}, {"title": "Deutscher Titel 2", "title_en": "English Title 2", "de": "Text 2", "en": "Translation 2"}, {"title": "Deutscher Titel 3", "title_en": "English Title 3", "de": "Text 3", "en": "Translation 3"}]}`;
 }
 
 function renderPanel(panelId, reviews, productName, style) {
@@ -640,6 +640,7 @@ function renderPanel(panelId, reviews, productName, style) {
       <div class="review-text" id="${style}-text-${i}">${escapeHtml(r.de)}</div>
       ${r.en ? `<hr class="translation-divider">
         <div class="translation-label">🇬🇧 English Translation</div>
+        ${r.title_en ? `<div class="review-title" style="font-size:14px;margin-bottom:6px;">${escapeHtml(r.title_en)}</div>` : ''}
         <div class="review-translation">${escapeHtml(r.en)}</div>` : ''}
       <button class="copy-btn" onclick="copyText('${style}-text-${i}', this)">Copy German</button>
     </div>
