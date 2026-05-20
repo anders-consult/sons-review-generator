@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SONS Verbatim Review Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #3c3c3b;
+    --cream:      #faf9f5;
+    --gold:       #f9b233;
+    --gold-light: #fdd98a;
+    --gold-pale:  #fef3d8;
+    --rust:       #e09520;
+    --sage:       #30302e;
+    --mist:       #f4f3ef;
+    --mid:        #7a7a78;
+    --rule:       #e2e0da;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--mist);
+    min-height: 100vh;
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: var(--gold);
+    z-index: 200; transition: width 0.1s; width: 0%;
+  }
+
+  /* ── Header ── */
+  .site-header {
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--rule);
+    padding: 18px 48px;
+    position: sticky;
+    top: 3px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-logo {
+    font-size: 17px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .nav-logo span { color: var(--gold); }
+  .header-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--mid);
+    font-weight: 500;
+  }
+
+  /* ── Main wrapper ── */
+  .main {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 52px 24px 100px;
+  }
+
+  /* ── Page title block ── */
+  .page-title-block { margin-bottom: 44px; }
+  .page-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .page-title {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 0;
+  }
+  .page-title em { font-style: normal; color: var(--gold); }
+  .divider { width: 50px; height: 3px; background: var(--gold); margin: 22px 0; }
+  .page-lead {
+    font-size: 15px;
+    color: var(--mid);
+    line-height: 1.75;
+    max-width: 540px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: #fff;
+    padding: 28px 32px;
+    margin-bottom: 12px;
+    border: 1px solid var(--rule);
+    border-top: 3px solid transparent;
+    transition: border-top-color 0.2s;
+  }
+  .card:focus-within { border-top-color: var(--gold); }
+
+  /* ── Section eyebrows ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  /* ── Select ── */
+  select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--rule);
+    border-radius: 0;
+    font-size: 14px;
+    font-family: 'Roboto', sans-serif;
+    color: var(--ink);
+    background: #fff;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7a78' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  select:focus { border-color: var(--gold); }
+
+  /* ── Criteria checkboxes ── */
+  .criteria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .criteria-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--rule);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    font-size: 13px;
+    color: var(--mid);
+    background: #fff;
+  }
+  .criteria-item:hover { border-color: var(--gold); background: var(--gold-pale); color: var(--ink); }
+  .criteria-item.selected { border-color: var(--gold); background: var(--gold-pale); color: var(--ink); font-weight: 600; }
+  .criteria-item input[type="checkbox"] { display: none; }
+  .criteria-check {
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--rule);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    background: #fff;
+  }
+  .criteria-item.selected .criteria-check { background: var(--gold); border-color: var(--gold); }
+  .criteria-item.selected .criteria-check::after {
+    content: '';
+    width: 8px; height: 5px;
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px); display: block;
+  }
+
+  /* ── Generate button ── */
+  .generate-btn {
+    width: 100%;
+    padding: 16px 32px;
+    background: var(--gold);
+    color: #fff;
+    border: 2px solid var(--gold);
+    border-radius: 0;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    transition: background 0.25s, transform 0.2s, border-color 0.25s;
+    margin-top: 8px;
+    margin-bottom: 12px;
+  }
+  .generate-btn:hover { background: var(--rust); border-color: var(--rust); transform: translateY(-2px); }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn:disabled { background: var(--gold-light); border-color: var(--gold-light); cursor: not-allowed; transform: none; }
+
+  /* ── Loading ── */
+  .loading {
+    display: none; text-align: center;
+    padding: 36px 32px;
+    color: var(--mid); font-size: 13px;
+    background: #fff; border: 1px solid var(--rule);
+    margin-bottom: 12px;
+    letter-spacing: 0.03em;
+  }
+  .loading.show { display: block; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--rule);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Error ── */
+  .error-msg {
+    background: #fff5f5; border: 1.5px solid #fca5a5;
+    color: #dc2626; padding: 14px 18px;
+    font-size: 13px; margin-bottom: 12px; display: none;
+  }
+  .error-msg.show { display: block; }
+
+  /* ── Results ── */
+  .results { display: none; }
+  .results.show { display: block; margin-top: 8px; }
+
+  .result-eyebrow {
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.22em;
+    color: var(--gold); margin-bottom: 20px;
+    margin-top: 36px;
+  }
+
+  /* ── Tab bar ── */
+  .tab-bar { display: flex; border-bottom: 3px solid var(--rule); margin-bottom: 24px; }
+  .tab-btn {
+    padding: 14px 24px;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: none; border: none;
+    border-bottom: 4px solid transparent; margin-bottom: -3px;
+    cursor: pointer; color: var(--mid);
+    font-family: 'Roboto', sans-serif; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-active {
+    color: var(--gold) !important;
+    border-bottom-color: var(--gold) !important;
+    font-weight: 600 !important;
+  }
+
+  /* ── Review cards ── */
+  .review-card {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    transition: box-shadow 0.2s;
+  }
+  .review-card:hover { box-shadow: 0 4px 24px rgba(249,178,51,0.12); }
+
+  .review-num {
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.20em;
+    color: var(--gold); margin-bottom: 10px;
+  }
+  .tag-product {
+    display: inline-block;
+    background: var(--gold-pale);
+    color: var(--rust);
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.10em; text-transform: uppercase;
+    padding: 3px 10px; margin-bottom: 10px;
+    border: 1px solid var(--gold-light);
+  }
+  .star-row { color: var(--gold); font-size: 14px; letter-spacing: 2px; margin-bottom: 10px; }
+  .review-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.4; }
+  .review-text { font-size: 14px; line-height: 1.75; color: var(--ink); }
+  .translation-divider { border: none; border-top: 1px solid var(--rule); margin: 14px 0; }
+  .translation-label {
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--mid); margin-bottom: 6px;
+  }
+  .review-translation { font-size: 13px; line-height: 1.65; color: var(--mid); font-style: italic; }
+
+  .copy-btn {
+    margin-top: 16px; padding: 8px 18px;
+    border: 1.5px solid var(--rule); border-radius: 0;
+    font-size: 11px; font-family: 'Roboto', sans-serif;
+    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; background: #fff; color: var(--mid);
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: var(--gold-pale); color: var(--ink); border-color: var(--gold); }
+  .copy-btn.copied { background: var(--gold-pale); color: var(--rust); border-color: var(--gold); }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .site-header { padding: 14px 20px; }
+    .header-eyebrow { display: none; }
+    .main { padding: 36px 16px 80px; }
+    .card { padding: 20px 18px; }
+    .criteria-grid { grid-template-columns: 1fr; }
+    .tab-btn { padding: 12px 14px; font-size: 11px; }
+    .review-card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header class="site-header">
+  <span class="nav-logo">Sons<span> Review</span></span>
+  <span class="header-eyebrow">Verbatim Generator</span>
+</header>
+
+<main class="main">
+
+  <div class="page-title-block">
+    <p class="page-eyebrow">Insight Tool — Consumer Verbatims</p>
+    <h1 class="page-title">Generate <em>authentic</em><br>German reviews</h1>
+    <div class="divider"></div>
+    <p class="page-lead">Select a product and focus areas to generate three verbatim customer reviews — each in a different style.</p>
+  </div>
+
+  <!-- 1 · Product -->
+  <div class="card">
+    <div class="section-label">01 — Select Product</div>
+    <select id="productSelect">
+      <option value="minoxidil-60ml">SONS Minoxidil 5% (60ml)</option>
+      <option value="minoxidil">SONS Minoxidil 5% (3x60ml)</option>
+      <option value="minoxidil-roller">SONS Minoxidil 5% + Derma Roller</option>
+      <option value="shampoo">SONS Anti-Hair Loss Shampoo</option>
+      <option value="shampoo-spulung">SONS Shampoo &amp; Conditioner Set</option>
+      <option value="haarspulung">SONS Strengthening Conditioner</option>
+      <option value="thickening-clay">SONS Thickening Clay</option>
+      <option value="derma-roller">SONS Derma Roller 0.25mm</option>
+      <option value="hair-growth-komplex">SONS Hair Growth Complex</option>
+    </select>
+  </div>
+
+  <!-- 2 · Focus Areas -->
+  <div class="card">
+    <div class="section-label">02 — Focus Areas</div>
+    <div class="criteria-grid" id="criteriaGrid">
+      <label class="criteria-item selected">
+        <input type="checkbox" value="Effectiveness" checked>
+        <span class="criteria-check"></span>
+        <span>Effectiveness</span>
+      </label>
+      <label class="criteria-item selected">
+        <input type="checkbox" value="Hair Growth" checked>
+        <span class="criteria-check"></span>
+        <span>Hair Growth</span>
+      </label>
+      <label class="criteria-item">
+        <input type="checkbox" value="Scent &amp; Fragrance">
+        <span class="criteria-check"></span>
+        <span>Scent &amp; Fragrance</span>
+      </label>
+      <label class="criteria-item">
+        <input type="checkbox" value="Ease of Use">
+        <span class="criteria-check"></span>
+        <span>Ease of Use</span>
+      </label>
+      <label class="criteria-item">
+        <input type="checkbox" value="Packaging &amp; Delivery">
+        <span class="criteria-check"></span>
+        <span>Packaging &amp; Delivery</span>
+      </label>
+      <label class="criteria-item">
+        <input type="checkbox" value="Value for Money">
+        <span class="criteria-check"></span>
+        <span>Value for Money</span>
+      </label>
+      <label class="criteria-item">
+        <input type="checkbox" value="Scalp Health">
+        <span class="criteria-check"></span>
+        <span>Scalp Health</span>
+      </label>
+      <label class="criteria-item">
+        <input type="checkbox" value="Hair Thickening">
+        <span class="criteria-check"></span>
+        <span>Hair Thickening</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <button class="generate-btn" id="generateBtn" onclick="generateReviews()">
+    Generate 3 Verbatims in 3 Styles
+  </button>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span id="loadingText">Generating Normal style (1/3)…</span>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <p class="result-eyebrow">Generated Reviews — Switch Style</p>
+    <div class="tab-bar">
+      <button class="tab-btn tab-active" onclick="switchTab('Normal')" id="tab-Normal">💬 Normal</button>
+      <button class="tab-btn" onclick="switchTab('Young')" id="tab-Young">⚡ Young</button>
+      <button class="tab-btn" onclick="switchTab('Insightful')" id="tab-Insightful">🔍 Insightful</button>
+    </div>
+    <div id="panel-Normal" class="style-panel"></div>
+    <div id="panel-Young" class="style-panel" style="display:none;"></div>
+    <div id="panel-Insightful" class="style-panel" style="display:none;"></div>
+  </div>
+
+</main>
+
+<script>
+// ── Progress bar ──────────────────────────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  if (total > 0) document.getElementById('progressBar').style.width = (window.scrollY / total * 100) + '%';
+});
+
+// ── Review data ───────────────────────────────────────────────────────────────
+const REVIEWS = {
+  "minoxidil-60ml": {
+    name: "SONS Minoxidil 5% (60ml)",
+    reviews: [
+      "Im ersten Monat der Anwendung bleibt der Haarverlust konstant bzw. wird minimal stärker. Nach etwas mehr als einem Monat merkt man dann, dass der Haarverlust fast komplett aufhört und die Haare langsam wieder dichter werden. Man sollte sich keine Wunder erwarten, aber für mich funktioniert es prima und ohne ernsthafte Nebenwirkungen.",
+      "Wirkt und macht was es soll. Die Sprühflaschen sind gut. Die Qualität von dem Produkt ist super und die Wirkung nach kurzer Zeit sichtbar. Ich nutze es als Kur zusammen mit einem Derma Roller. Von daher 5 Sterne.",
+      "Nach etwa zwei Monaten Anwendung kann ich ehrlich sagen, dass ich von den Ergebnissen begeistert bin. Anfangs war ich skeptisch, aber meine Haarlinie ist gerettet und mein Haar sieht voller aus. Dieses Produkt hat mein Leben wirklich verändert.",
+      "Ich hätte es fast nicht geglaubt, aber es funktioniert wirklich sehr gut. Jetzt nach ca. 3 Monaten habe ich schon deutlich Barthaare bekommen. Sehr gutes Produkt, wenn man seinen Haarwuchs anregen möchte.",
+      "Nach einer Chemotherapie sind meine Augenbrauen nicht mehr gewachsen. Nach etwa einem Monat regelmäßiger Anwendung wachsen lauter neue Haare. Bin so begeistert von dem Produkt und werde es weiterhin benutzen."
+    ]
+  },
+  "minoxidil": {
+    name: "SONS Minoxidil 5% (3x60ml)",
+    reviews: [
+      "Im ersten Monat der Anwendung bleibt der Haarverlust konstant bzw. wird minimal stärker. Nach etwas mehr als einem Monat merkt man dann, dass der Haarverlust fast komplett aufhört und die Haare langsam wieder dichter werden. Man sollte sich keine Wunder erwarten, aber für mich funktioniert es prima und ohne ernsthafte Nebenwirkungen.",
+      "Wirkt und macht was es soll. Die Sprühflaschen sind gut. Die Qualität von dem Produkt ist super und die Wirkung nach kurzer Zeit sichtbar. Ich nutze es als Kur zusammen mit einem 0,7 Derma Roller. Von daher 5 Sterne.",
+      "Nach etwa zwei Monaten Anwendung kann ich ehrlich sagen, dass ich von den Ergebnissen begeistert bin. Anfangs war ich skeptisch, aber meine Haarlinie ist gerettet und mein Haar sieht voller aus. Ein wichtiger Tipp: Es ist ratsam, die Haare zu Beginn zu rasieren, damit der Dermaroller besser angewendet werden kann.",
+      "Ich hätte es fast nicht geglaubt, aber es funktioniert wirklich sehr gut. Ich hatte keinen Bartwuchs, aber jetzt nach ca. 3 Monaten habe ich schon deutlich Barthaare bekommen. Sehr gutes Produkt, wenn man seinen Haarwuchs anregen möchte.",
+      "Nach einer Chemotherapie sind meine Augenbrauen nicht mehr gewachsen. Benutze es erst seit einem Monat und muss sagen: Es sind lauter neue Haare, die wachsen! Bin so begeistert von dem Produkt."
+    ]
+  },
+  "minoxidil-roller": {
+    name: "SONS Minoxidil 5% + Derma Roller",
+    reviews: [
+      "Produkt kam schnell und gut verpackt an. Alles fühlt sich hochwertig an. Produkt ist gut aufzutragen, auch wenn ich noch nicht viel über die langfristige Wirkung sagen kann.",
+      "Tolles Produkt. Super einfach zu benutzen und sehr effektiv. Ich sehe bereits nach 6 Monaten erste Ergebnisse!",
+      "Nach vierwöchiger Behandlung gemäss der Anwendungsbeschreibung ist schon eine Verdichtung des Haares feststellbar. Auch lässt sich Nachwuchs an vorher teilweise kahlen Stellen erkennen. Ich kann das Produkt daher empfehlen."
+    ]
+  },
+  "shampoo": {
+    name: "SONS Anti-Haarausfall Shampoo",
+    reviews: [
+      "Das Shampoo ist leicht parfümiert, riecht gut und lässt sich leicht verteilen. Ich hatte seit knapp 3 Monaten begonnen aktiv gegen den Haarausfall zu arbeiten. Seitdem wachsen wieder kleine Härchen auf der Kopfhaut. Die Friseure haben gestaunt, dass die Haare wieder zurückkehren.",
+      "Seit ein paar Monaten nutze ich das Shampoo und bin wirklich zufrieden. Der Geruch ist angenehm und es pflegt die Kopfhaut gut.",
+      "Sehr gute Qualität! Das Shampoo reinigt gründlich, riecht frisch nach Zitrus und die Kopfhaut fühlt sich danach gesund an.",
+      "Wirklich gut. Meine Haare sind jetzt viel gesünder als früher. Ich bin sehr begeistert und kaufe es weiter."
+    ]
+  },
+  "shampoo-spulung": {
+    name: "SONS Shampoo & Spülung Set",
+    reviews: [
+      "Bestellung war transparent und pünktlich. Der Shampoo riecht herrlich und hinterlässt keine Rückstände. Es fühlt sich gut an. Ich empfehle immer, Shampoo und Spülung gemeinsam zu bestellen, um die Vorteile zu verlängern.",
+      "Gutes Shampoo. Keine trockenen Haare, kein Nachfetten, kein Juckreiz.",
+      "Mein neues Lieblingsshampoo und meine Lieblingsspülung! Ich habe wirklich dünnes Haar, und seit ich dieses Produkt entdeckt habe, ist mein Haar deutlich dichter geworden.",
+      "Sehr schneller Versand. Toller Duft nach Zitrone. Das Shampoo ist mild für die Augen und die Spülung verteilt sich sehr gut. Top – zum Empfehlen!",
+      "Das Shampoo ist leicht parfümiert, riecht gut und lässt sich leicht verteilen. Seit ich es nutze, wachsen wieder kleine Härchen auf der Kopfhaut.",
+      "Ich werde auf jeden Fall weiter anwenden und kann Sons jedem empfehlen, der unter Haarausfall leidet."
+    ]
+  },
+  "haarspulung": {
+    name: "SONS Stärkende Haarspülung",
+    reviews: [
+      "Wirklich gut. Meine Haare sind jetzt viel gesünder als früher. Ich bin sehr begeistert.",
+      "Die Spülung macht die Haare weich und lässt sich gut verteilen. Der Zitrusduft ist angenehm und hält nach.",
+      "Verwende die Spülung zusammen mit dem Sons Shampoo – eine tolle Kombination. Die Haare sind seitdem deutlich pflegeleichter und wirken voller.",
+      "Gute Konsistenz, angenehmer Duft. Die Haare fühlen sich nach der Anwendung gepflegt und kräftig an."
+    ]
+  },
+  "thickening-clay": {
+    name: "SONS Thickening Clay",
+    reviews: [
+      "Gut zu verteilen und hält den ganzen Tag. Genau das, was ich gesucht habe.",
+      "Top Qualität, angenehmer Duft und gute Konsistenz. Das Clay ist nicht zu fest und nicht zu weich – genau richtig.",
+      "Gutes Haarstyling-Produkt. Verleiht dem Haar Volumen und Struktur ohne zu fetten. Der Zitrusduft ist schön frisch.",
+      "Ich nutze die Clay täglich. Das matte Finish sieht sehr natürlich aus und der Halt ist für feine Haare absolut ausreichend."
+    ]
+  },
+  "derma-roller": {
+    name: "SONS Derma Roller 0.25mm",
+    reviews: [
+      "Erfüllt was es soll. Die Qualität ist gut und er ist einfach zu reinigen.",
+      "Einfach in der Anwendung. Ich verwende ihn zusammen mit Minoxidil – eine tolle Kombination für bessere Wirkung.",
+      "Gutes Gerät für den Preis. Die Mikronadeln stimulieren die Kopfhaut gut und die Durchblutung wird spürbar angeregt.",
+      "Verwende den Derma Roller seit 2 Monaten 2-3x pro Woche. Die Kombination mit Minoxidil funktioniert deutlich besser als Minoxidil allein."
+    ]
+  },
+  "hair-growth-komplex": {
+    name: "SONS Hair Growth Komplex",
+    reviews: [
+      "Sons Hair Growth Complex ist ein vielversprechendes Nahrungsergänzungsmittel für Menschen, die ihr Haarwachstum anregen möchten. Die Kombination aus natürlichen Inhaltsstoffen und wissenschaftlich fundierten Wirkstoffen macht es zu einer interessanten Option.",
+      "Kapseln lassen sich gut schlucken und sind geschmacksneutral. Man spürt bereits nach 6 Wochen, dass die Haare besser wachsen!",
+      "Gut verträgliches Supplement mit sinnvoller Inhaltsstoffkombination. Nach regelmäßiger Einnahme wirken die Haare kräftiger und gesünder.",
+      "Die Inhaltsstoffe wie Meereskollagen, Anagain und Sägepalme sind wissenschaftlich gut belegt. Nach 2 Monaten bemerke ich, dass meine Haare weniger brechen und voller wirken."
+    ]
+  }
+};
+
+// ── Criteria toggle ───────────────────────────────────────────────────────────
+document.querySelectorAll('.criteria-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const cb = item.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    item.classList.toggle('selected', cb.checked);
+  });
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function stripDashes(str) {
+  if (!str) return str;
+  str = str.replace(/\s*–\s*/g, ', ');
+  str = str.replace(/\s*—\s*/g, ', ');
+  str = str.replace(/ - /g, ', ');
+  return str;
+}
+
+function coerceString(raw) {
+  if (typeof raw === 'string') return raw;
+  if (raw && typeof raw === 'object' && raw.text) return raw.text;
+  if (raw && typeof raw === 'object' && raw.content) return raw.content;
+  return JSON.stringify(raw);
+}
+
+function parseReviews(raw) {
+  const result = coerceString(raw);
+  try {
+    let clean = result.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('no braces');
+    const parsed = JSON.parse(clean.slice(start, end + 1));
+    if (parsed.reviews && Array.isArray(parsed.reviews) && parsed.reviews.length >= 3) {
+      return parsed.reviews.map(r =>
+        typeof r === 'string'
+          ? { title: '', de: stripDashes(r), en: '' }
+          : { title: r.title || '', de: stripDashes(r.de || ''), en: stripDashes(r.en || '') }
+      );
+    }
+  } catch(e) {}
+  function extractAll(str, re) {
+    const out = []; let m;
+    while ((m = re.exec(str)) !== null) out.push(m[1]);
+    return out;
+  }
+  const deList = extractAll(result, /"de"\s*:\s*"((?:[^"\\]|\\.)*)"/g);
+  const enList = extractAll(result, /"en"\s*:\s*"((?:[^"\\]|\\.)*)"/g);
+  if (deList.length >= 3) {
+    return deList.slice(0,3).map((de, i) => ({ title: '', de: stripDashes(de), en: stripDashes(enList[i] || '') }));
+  }
+  throw new Error('Could not read response — please try again.');
+}
+
+function buildPrompt(product, criteria, style) {
+  const styleGuide = {
+    Normal: "Balanced and natural customer language. Not too formal, not too casual. Like a real everyday German customer writing a genuine review on Amazon.",
+    Young: "Casual, enthusiastic, modern German. Use colloquial youth language – words like 'mega', 'krass', 'echt', 'total', 'absolut'. Short punchy sentences, some exclamation points. Sounds like someone in their 20s.",
+    Insightful: "Detailed and analytical. The reviewer sounds knowledgeable, possibly mentions specific ingredients or mechanisms. Provides thoughtful, structured evaluation. Longer sentences, balanced perspective."
+  };
+  const realExamples = product.reviews.slice(0,4).map((r,i) => `Beispiel ${i+1}: "${r}"`).join('\n');
+  return `Du bist ein erfahrener Texter für authentische Kundenbewertungen auf Amazon.de.
+
+Schreibe genau 3 verschiedene, authentische deutsche Kundenbewertungen (5 Sterne) für:
+Produkt: ${product.name}
+
+Stil: ${style}
+Stilbeschreibung: ${styleGuide[style]}
+
+Schwerpunkte (erwähne diese Aspekte):
+${criteria.map(c => `- ${c}`).join('\n')}
+
+Echte Kundenbewertungen als Tonalitätsreferenz:
+${realExamples}
+
+Anforderungen:
+- Jede Bewertung 3 bis 6 Sätze lang
+- Authentisch und menschlich, kein Marketingsprech
+- Alle 3 unterscheiden sich in Perspektive oder Schwerpunkt
+- Auf Deutsch
+- Verwende KEINE Bindestriche oder Gedankenstriche (kein "-" und kein "–"). Schreibe stattdessen ganze Sätze oder verwende Kommas.
+
+Antworte NUR mit validem JSON:
+{"reviews": [{"title": "Kurzer Bewertungstitel 1", "de": "Text 1", "en": "Translation 1"}, {"title": "Kurzer Bewertungstitel 2", "de": "Text 2", "en": "Translation 2"}, {"title": "Kurzer Bewertungstitel 3", "de": "Text 3", "en": "Translation 3"}]}`;
+}
+
+function renderPanel(panelId, reviews, productName, style) {
+  const styleEmoji = { Normal: '💬', Young: '⚡', Insightful: '🔍' };
+  const panel = document.getElementById(panelId);
+  panel.innerHTML = reviews.map((r, i) => `
+    <div class="review-card">
+      <div class="review-num">${styleEmoji[style]} Review ${i+1} &nbsp;·&nbsp; ${style} Style</div>
+      <span class="tag-product">${escapeHtml(productName)}</span>
+      <div class="star-row">★★★★★</div>
+      ${r.title ? `<div class="review-title">${escapeHtml(r.title)}</div>` : ''}
+      <div class="review-text" id="${style}-text-${i}">${escapeHtml(r.de)}</div>
+      ${r.en ? `<hr class="translation-divider">
+        <div class="translation-label">🇬🇧 English Translation</div>
+        <div class="review-translation">${escapeHtml(r.en)}</div>` : ''}
+      <button class="copy-btn" onclick="copyText('${style}-text-${i}', this)">Copy German</button>
+    </div>
+  `).join('');
+}
+
+function copyText(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy German'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(style) {
+  ['Normal','Young','Insightful'].forEach(s => {
+    document.getElementById('tab-' + s).classList.toggle('tab-active', s === style);
+    document.getElementById('panel-' + s).style.display = (s === style) ? 'block' : 'none';
+  });
+}
+
+// ── Main generate ─────────────────────────────────────────────────────────────
+async function generateReviews() {
+  const productKey = document.getElementById('productSelect').value;
+  const product = REVIEWS[productKey];
+  const selectedCriteria = Array.from(document.querySelectorAll('.criteria-item.selected input')).map(cb => cb.value);
+
+  if (selectedCriteria.length === 0) { showError('Please select at least one focus area.'); return; }
+
+  hideError();
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('results').classList.remove('show');
+  showLoading(true);
+
+  const styles = ['Normal', 'Young', 'Insightful'];
+  try {
+    for (let i = 0; i < styles.length; i++) {
+      const style = styles[i];
+      document.getElementById('loadingText').textContent = `Generating ${style} style (${i+1}/3)…`;
+      const _resp = await fetch("/api/generate", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ prompt: buildPrompt(product, selectedCriteria, style) })
+      });
+      if (!_resp.ok) throw new Error("API error " + _resp.status);
+      const raw = await _resp.json();
+      const reviews = parseReviews(raw);
+      renderPanel('panel-' + style, reviews, product.name, style);
+    }
+    switchTab('Normal');
+    document.getElementById('results').classList.add('show');
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    showError('Generation failed: ' + (err.message || 'Unknown error. Please try again.'));
+  } finally {
+    showLoading(false);
+    document.getElementById('generateBtn').disabled = false;
+  }
+}
+
+function showLoading(show) { document.getElementById('loading').classList.toggle('show', show); }
+function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.classList.add('show'); }
+function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
+</script>
+</body>
+</html>
