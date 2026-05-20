@@ -555,6 +555,7 @@ function stripDashes(str) {
   str = str.replace(/\s*–\s*/g, ', ');
   str = str.replace(/\s*—\s*/g, ', ');
   str = str.replace(/ - /g, ', ');
+  str = str.replace(/,\s*und/g, ' und');
   return str;
 }
 
@@ -621,6 +622,7 @@ Anforderungen:
 - Alle 3 unterscheiden sich in Perspektive oder Schwerpunkt
 - Auf Deutsch
 - Verwende KEINE Bindestriche oder Gedankenstriche (kein "-" und kein "–"). Schreibe stattdessen ganze Sätze oder verwende Kommas.
+- Setze KEIN Komma vor "und". Schreibe niemals ", und".
 
 Antworte NUR mit validem JSON:
 {"reviews": [{"title": "Kurzer Bewertungstitel 1", "de": "Text 1", "en": "Translation 1"}, {"title": "Kurzer Bewertungstitel 2", "de": "Text 2", "en": "Translation 2"}, {"title": "Kurzer Bewertungstitel 3", "de": "Text 3", "en": "Translation 3"}]}`;
