@@ -298,6 +298,27 @@
   .copy-btn:hover { background: var(--gold-pale); color: var(--ink); border-color: var(--gold); }
   .copy-btn.copied { background: var(--gold-pale); color: var(--rust); border-color: var(--gold); }
 
+  /* ── Regenerate button ── */
+  .regenerate-btn {
+    width: 100%;
+    padding: 14px 32px;
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 0;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    transition: all 0.25s;
+    margin-top: 8px;
+  }
+  .regenerate-btn:hover { background: var(--ink); color: #fff; transform: translateY(-2px); }
+  .regenerate-btn:active { transform: translateY(0); }
+  .regenerate-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
   /* ── Responsive ── */
   @media (max-width: 640px) {
     .site-header { padding: 14px 20px; }
@@ -325,7 +346,7 @@
     <p class="page-eyebrow">Insight Tool — Consumer Verbatims</p>
     <h1 class="page-title">Generate <em>authentic</em><br>German reviews</h1>
     <div class="divider"></div>
-    <p class="page-lead">Select a product and focus areas to generate three verbatim customer reviews — each in a different style.</p>
+    <p class="page-lead">Select a product and focus areas to generate three verbatim customer reviews — choose between different styles (Normal, Young, Insightful).</p>
   </div>
 
   <!-- 1 · Product -->
@@ -414,6 +435,7 @@
     <div id="panel-Normal" class="style-panel"></div>
     <div id="panel-Young" class="style-panel" style="display:none;"></div>
     <div id="panel-Insightful" class="style-panel" style="display:none;"></div>
+    <button class="regenerate-btn" id="regenerateBtn" onclick="generateReviews()">↻ Regenerate All Styles</button>
   </div>
 
 </main>
@@ -649,6 +671,8 @@ async function generateReviews() {
 
   hideError();
   document.getElementById('generateBtn').disabled = true;
+  const regenBtn = document.getElementById('regenerateBtn');
+  if (regenBtn) regenBtn.disabled = true;
   document.getElementById('results').classList.remove('show');
   showLoading(true);
 
@@ -675,6 +699,7 @@ async function generateReviews() {
   } finally {
     showLoading(false);
     document.getElementById('generateBtn').disabled = false;
+    if (regenBtn) regenBtn.disabled = false;
   }
 }
 
