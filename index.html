@@ -673,6 +673,8 @@ async function generateReviews() {
   document.getElementById('generateBtn').disabled = true;
   const regenBtn = document.getElementById('regenerateBtn');
   if (regenBtn) regenBtn.disabled = true;
+  document.getElementById('productSelect').disabled = true;
+  document.querySelectorAll('.criteria-item').forEach(el => el.style.pointerEvents = 'none');
   document.getElementById('results').classList.remove('show');
   showLoading(true);
 
@@ -700,6 +702,8 @@ async function generateReviews() {
     showLoading(false);
     document.getElementById('generateBtn').disabled = false;
     if (regenBtn) regenBtn.disabled = false;
+    document.getElementById('productSelect').disabled = false;
+    document.querySelectorAll('.criteria-item').forEach(el => el.style.pointerEvents = '');
   }
 }
 
