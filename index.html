@@ -328,7 +328,44 @@
     .criteria-grid { grid-template-columns: 1fr; }
     .tab-btn { padding: 12px 14px; font-size: 11px; }
     .review-card { padding: 18px 16px; }
+    .guide-links { grid-template-columns: 1fr; }
   }
+
+  /* ── Guide section ── */
+  .guide-text {
+    font-size: 13px;
+    color: var(--mid);
+    line-height: 1.65;
+    margin-bottom: 0;
+  }
+  .guide-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .guide-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 18px;
+    background: var(--mist);
+    border: 1.5px solid var(--rule);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .guide-btn:hover {
+    border-color: var(--gold);
+    background: var(--gold-pale);
+  }
+  .guide-btn svg { flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -347,6 +384,22 @@
     <h1 class="page-title">Generate <em>authentic</em><br>German reviews</h1>
     <div class="divider"></div>
     <p class="page-lead">Select a product and focus areas to generate three verbatim customer reviews — choose between different styles (Normal, Young, Insightful).</p>
+  </div>
+
+  <!-- 0 · Writing Guides -->
+  <div class="card">
+    <div class="section-label">00 — Writing Guides</div>
+    <p class="guide-text">Open the step-by-step guide for the platform before writing and submitting a review — it explains the exact process and requirements.</p>
+    <div class="guide-links">
+      <a href="/DocMorris_Product_Review_Guide.pdf" target="_blank" rel="noopener" class="guide-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        DocMorris Guide
+      </a>
+      <a href="/Shop_Apotheke_Product_Review_Guide.pdf" target="_blank" rel="noopener" class="guide-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        Shop Apotheke Guide
+      </a>
+    </div>
   </div>
 
   <!-- 1 · Product -->
