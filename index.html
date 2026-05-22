@@ -588,6 +588,30 @@ const REVIEWS = {
   }
 };
 
+// ── Already-published online reviews — injected into prompt to prevent duplication ──
+const ONLINE_REVIEWS_TO_AVOID = [
+  // Shop Apotheke — SONS Minoxidil 5% + Derma Roller (observed 22.05.2026)
+  { title: "Wissenschaftlich fundiert und praktisch wirksam", de: "Ich habe das Produkt für meinen Mann gekauft. Nach ausführlicher Recherche zur Wirksamkeit von Minoxidil als topisches Haarwuchsmittel habe ich mich für dieses Set entschieden. Die Kombination aus dem 5% Minoxidil und dem Derma Roller basiert auf nachgewiesenen dermatologischen Prinzipien, wobei der Roller die Hautpermeabilität erhöht und die Absorption des Wirkstoffs optimiert. Nach etwa 8 Wochen konnte mein Mann eine erste Verdichtung an der Haaransatzlinie sowie verstärkten Nachwuchs beobachten." },
+  { title: "Gutes Preis-Leistungs-Verhältnis und funktioniert wirklich", de: "Das Produkt ist günstiger als viele andere Angebote und trotzdem effektiv. Nach etwa sechs Wochen habe ich gemerkt, dass weniger Haare ausfallen und die Haardichte insgesamt besser wird. Der Derma Roller im Set ist praktisch, da ich nicht extra etwas kaufen musste. Ich bin mit meinem Kauf zufrieden und werde es weiterhin nutzen." },
+  { title: "Einfache Anwendung, gute Verpackung", de: "Produkt kam gut verpackt an und fühlt sich hochwertig an. Die Anwendung ist wirklich einfach, selbst wenn man das erste Mal damit arbeitet. Der Derma Roller liegt gut in der Hand und das Minoxidil lässt sich problemlos auftragen. Nach wenigen Wochen sehe ich bereits kleine Veränderungen." },
+  // DocMorris — SONS Minoxidil 5% + Derma Roller (observed 22.05.2026)
+  { title: "Endlich sichtbare Ergebnisse und gut verträglich", de: "Ich bin mit dem SONS Minoxidil sehr zufrieden. Der Haarwuchs hat deutlich zugenommen. Das ist für mich das Wichtigste. Es hat bei mir ohne Probleme funktioniert und ich bemerke keine Nebenwirkungen. Mit dem Dreierpack bekommt man ein sehr gutes Angebot für eine längerfristige Behandlung und ich kann das Produkt ohne Vorbehalte empfehlen." }
+];
+
+// ── Session memory — tracks every review generated this browser session ───────
+// Prevents near-identical outputs when the user regenerates multiple times.
+const sessionReviews = [];
+
+// ── Reviewer angle pool — rotates so each generation batch uses a fresh lens ──
+const REVIEWER_ANGLES = [
+  "Schreibe aus der Sicht eines Erstanwenders, der zunächst skeptisch war und positiv überrascht wurde.",
+  "Schreibe aus der Sicht eines Käufers, der das Produkt als Geschenk für seinen Partner oder einen engen Freund besorgt hat.",
+  "Schreibe aus der Sicht eines Langzeitnutzers, der das Produkt bereits seit mehreren Monaten regelmäßig verwendet.",
+  "Schreibe aus der Sicht eines preisbewussten Käufers, der mehrere ähnliche Produkte verglichen hat bevor er sich entschieden hat.",
+  "Schreibe aus der Sicht eines Nutzers, dem unkomplizierte Handhabung im Alltag besonders wichtig ist.",
+  "Schreibe aus der Sicht eines recherchierenden Verbrauchers, der sich vorab über Inhaltsstoffe und Wirkweise informiert hat."
+];
+
 // ── Criteria toggle ───────────────────────────────────────────────────────────
 document.querySelectorAll('.criteria-item').forEach(item => {
   item.addEventListener('click', () => {
@@ -648,13 +672,23 @@ function parseReviews(raw) {
   throw new Error('Could not read response — please try again.');
 }
 
-function buildPrompt(product, criteria, style) {
+function buildPrompt(product, criteria, style, angleIndex) {
   const styleGuide = {
     Normal: "Balanced and natural customer language. Not too formal, not too casual. Like a real everyday German customer writing a genuine review on Amazon.",
     Young: "Casual, enthusiastic, modern German. Use colloquial youth language – words like 'mega', 'krass', 'echt', 'total', 'absolut'. Short punchy sentences, some exclamation points. Sounds like someone in their 20s.",
     Insightful: "Detailed and analytical. The reviewer sounds knowledgeable, possibly mentions specific ingredients or mechanisms. Provides thoughtful, structured evaluation. Longer sentences, balanced perspective."
   };
   const realExamples = product.reviews.slice(0,4).map((r,i) => `Beispiel ${i+1}: "${r}"`).join('\n');
+
+  // Reviewer angle rotates per call so outputs don't converge on the same lens
+  const angle = REVIEWER_ANGLES[angleIndex % REVIEWER_ANGLES.length];
+
+  // Build the "avoid" block from online reviews + everything generated this session
+  const allAvoid = [...ONLINE_REVIEWS_TO_AVOID, ...sessionReviews];
+  const avoidBlock = allAvoid.length > 0
+    ? `\nDiese Bewertungen existieren bereits online oder wurden in dieser Sitzung generiert. Schreibe KEINESFALLS ähnliche Texte — vermeide ähnliche Titel, Einstiegssätze, Kernaussagen oder Formulierungen:\n${allAvoid.map(r => `• "${r.title}" — ${r.de.slice(0, 100)}…`).join('\n')}\n`
+    : '';
+
   return `Du bist ein erfahrener Texter für authentische Kundenbewertungen auf Amazon.de.
 
 Schreibe genau 3 verschiedene, authentische deutsche Kundenbewertungen (5 Sterne) für:
@@ -663,16 +697,19 @@ Produkt: ${product.name}
 Stil: ${style}
 Stilbeschreibung: ${styleGuide[style]}
 
+Reviewer-Perspektive (alle 3 Bewertungen aus diesem Blickwinkel schreiben):
+${angle}
+
 Schwerpunkte (erwähne diese Aspekte):
 ${criteria.map(c => `- ${c}`).join('\n')}
 
 Echte Kundenbewertungen als Tonalitätsreferenz:
 ${realExamples}
-
+${avoidBlock}
 Anforderungen:
 - Jede Bewertung 3 bis 6 Sätze lang
 - Authentisch und menschlich, kein Marketingsprech
-- Alle 3 unterscheiden sich in Perspektive oder Schwerpunkt
+- Alle 3 unterscheiden sich klar in Perspektive, Einstieg und Schwerpunkt voneinander
 - Auf Deutsch
 - Verwende KEINE Bindestriche oder Gedankenstriche (kein "-" und kein "–"). Schreibe stattdessen ganze Sätze oder verwende Kommas.
 - Setze KEIN Komma vor "und". Schreibe niemals ", und".
@@ -735,25 +772,40 @@ async function generateReviews() {
   showLoading(true);
 
   const styles = ['Normal', 'Young', 'Insightful'];
+  // Angle base advances by 1 each generation batch so consecutive regenerations
+  // don't converge on the same reviewer lens. Within a batch each style gets a
+  // different angle offset (+0, +1, +2) for additional intra-batch diversity.
+  const batchAngleBase = Math.floor(sessionReviews.length / 3) % REVIEWER_ANGLES.length;
   try {
     for (let i = 0; i < styles.length; i++) {
       const style = styles[i];
+      const angleIndex = (batchAngleBase + i) % REVIEWER_ANGLES.length;
       document.getElementById('loadingText').textContent = `Generating ${style} style (${i+1}/3)…`;
       const _resp = await fetch("/api/generate", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ prompt: buildPrompt(product, selectedCriteria, style) })
+        body: JSON.stringify({ prompt: buildPrompt(product, selectedCriteria, style, angleIndex) })
       });
       if (!_resp.ok) throw new Error("API error " + _resp.status);
       const raw = await _resp.json();
       const reviews = parseReviews(raw);
+      // Store generated reviews so future calls in this session avoid similar outputs
+      reviews.forEach(r => { if (r.title && r.de) sessionReviews.push({ title: r.title, de: r.de }); });
       renderPanel('panel-' + style, reviews, product.name, style);
     }
     switchTab('Normal');
     document.getElementById('results').classList.add('show');
     document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
-    showError('Generation failed: ' + (err.message || 'Unknown error. Please try again.'));
+    const msg = err.message || '';
+    const friendlyError = msg.includes('529') || msg.toLowerCase().includes('overload')
+      ? 'The AI is temporarily overloaded (529). Please wait a few seconds and try again.'
+      : msg.includes('401') || msg.includes('403')
+      ? 'Authentication error — please check the API key.'
+      : msg.includes('429')
+      ? 'Rate limit reached. Please wait a moment and try again.'
+      : 'Generation failed: ' + (msg || 'Unknown error. Please try again.');
+    showError(friendlyError);
   } finally {
     showLoading(false);
     document.getElementById('generateBtn').disabled = false;
