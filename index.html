@@ -602,6 +602,10 @@ const ONLINE_REVIEWS_TO_AVOID = [
 // Prevents near-identical outputs when the user regenerates multiple times.
 const sessionReviews = [];
 
+// ── Notion history — loaded once on page init from /api/reviews-read ──────────
+// Cross-session, cross-user pool of already-generated verbatims.
+let notionReviews = [];
+
 // ── Reviewer angle pool — rotates so each generation batch uses a fresh lens ──
 const REVIEWER_ANGLES = [
   "Schreibe aus der Sicht eines Erstanwenders, der zunächst skeptisch war und positiv überrascht wurde.",
@@ -672,7 +676,48 @@ function parseReviews(raw) {
   throw new Error('Could not read response — please try again.');
 }
 
-function buildPrompt(product, criteria, style, angleIndex) {
+// ── Similarity check — post-generation guard ──────────────────────────────────
+// Jaccard similarity on meaningful words (German stop words stripped).
+// Returns a 0–1 score; 1 = identical word set.
+const STOP_WORDS = new Set([
+  'ich','die','das','der','die','und','in','zu','von','mit','ist','es','ein','eine',
+  'einem','einen','eines','auf','für','bei','nach','hat','wie','auch','sich','aber',
+  'mehr','sehr','so','noch','bin','habe','war','wenn','dass','nicht','mir','mich',
+  'mein','meine','meinen','meiner','er','sie','wir','man','kann','als','dem','den',
+  'des','aus','an','am','im','um','vor','über','seit','haben','wurde','werden',
+  'sind','zum','zur','beim','durch','dann','schon','nur','mal','diesem','dieser',
+  'dieses','diesen','bereits','nach','immer','wieder','weil','denn','jetzt','hier'
+]);
+
+function wordSet(str) {
+  return new Set(
+    (str || '').toLowerCase()
+      .replace(/[^a-zäöüß\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !STOP_WORDS.has(w))
+  );
+}
+
+function jaccardSimilarity(a, b) {
+  const setA = wordSet(a);
+  const setB = wordSet(b);
+  if (setA.size === 0 && setB.size === 0) return 0;
+  const intersection = [...setA].filter(w => setB.has(w)).length;
+  const union = new Set([...setA, ...setB]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+// Returns true if `review` is too close to any entry in `pool`.
+// Threshold 0.38: roughly 2 in 5 meaningful words overlapping = too similar.
+function isTooSimilar(review, pool, threshold = 0.38) {
+  const newText = (review.title || '') + ' ' + (review.de || '');
+  return pool.some(existing => {
+    const existText = (existing.title || '') + ' ' + (existing.de || '');
+    return jaccardSimilarity(newText, existText) > threshold;
+  });
+}
+
+function buildPrompt(product, criteria, style, angleIndex, forceUnique = false) {
   const styleGuide = {
     Normal: "Balanced and natural customer language. Not too formal, not too casual. Like a real everyday German customer writing a genuine review on Amazon.",
     Young: "Casual, enthusiastic, modern German. Use colloquial youth language – words like 'mega', 'krass', 'echt', 'total', 'absolut'. Short punchy sentences, some exclamation points. Sounds like someone in their 20s.",
@@ -683,10 +728,14 @@ function buildPrompt(product, criteria, style, angleIndex) {
   // Reviewer angle rotates per call so outputs don't converge on the same lens
   const angle = REVIEWER_ANGLES[angleIndex % REVIEWER_ANGLES.length];
 
-  // Build the "avoid" block from online reviews + everything generated this session
-  const allAvoid = [...ONLINE_REVIEWS_TO_AVOID, ...sessionReviews];
+  // Build the "avoid" block: hardcoded online reviews + Notion history + this session
+  const allAvoid = [...ONLINE_REVIEWS_TO_AVOID, ...notionReviews, ...sessionReviews];
   const avoidBlock = allAvoid.length > 0
     ? `\nDiese Bewertungen existieren bereits online oder wurden in dieser Sitzung generiert. Schreibe KEINESFALLS ähnliche Texte — vermeide ähnliche Titel, Einstiegssätze, Kernaussagen oder Formulierungen:\n${allAvoid.map(r => `• "${r.title}" — ${r.de.slice(0, 100)}…`).join('\n')}\n`
+    : '';
+
+  const uniqueEscalation = forceUnique
+    ? `\nACHTUNG — ZWEITER VERSUCH: Die zuvor generierten Texte waren sprachlich oder inhaltlich zu ähnlich zu bestehenden Bewertungen. Schreibe jetzt völlig neue Bewertungen mit:\n- Komplett anderen Einstiegssätzen\n- Anderen zentralen Argumenten und Schlüsselwörtern\n- Einer anderen Satzstruktur und Länge\nJede Ähnlichkeit zu den oben aufgelisteten Bewertungen ist inakzeptabel.\n`
     : '';
 
   return `Du bist ein erfahrener Texter für authentische Kundenbewertungen auf Amazon.de.
@@ -705,7 +754,7 @@ ${criteria.map(c => `- ${c}`).join('\n')}
 
 Echte Kundenbewertungen als Tonalitätsreferenz:
 ${realExamples}
-${avoidBlock}
+${avoidBlock}${uniqueEscalation}
 Anforderungen:
 - Jede Bewertung 3 bis 6 Sätze lang
 - Authentisch und menschlich, kein Marketingsprech
@@ -754,6 +803,39 @@ function switchTab(style) {
   });
 }
 
+// ── Notion persistence helpers ────────────────────────────────────────────────
+async function loadNotionReviews() {
+  try {
+    const res = await fetch('/api/reviews-read');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.reviews)) {
+      notionReviews = data.reviews;
+    }
+  } catch (_) {
+    // Non-fatal: falls back to session-only avoidance
+  }
+}
+
+async function saveReviewsToNotion(reviews, productName, style) {
+  try {
+    await fetch('/api/reviews-write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviews, product: productName, style }),
+    });
+    // Also merge into the live notionReviews pool for this session
+    reviews.forEach(r => {
+      if (r.title && r.de) notionReviews.push({ title: r.title, de: r.de });
+    });
+  } catch (_) {
+    // Non-fatal: generation still succeeds even if persistence fails
+  }
+}
+
+// Load Notion history as soon as the page is ready
+loadNotionReviews();
+
 // ── Main generate ─────────────────────────────────────────────────────────────
 async function generateReviews() {
   const productKey = document.getElementById('productSelect').value;
@@ -788,9 +870,29 @@ async function generateReviews() {
       });
       if (!_resp.ok) throw new Error("API error " + _resp.status);
       const raw = await _resp.json();
-      const reviews = parseReviews(raw);
-      // Store generated reviews so future calls in this session avoid similar outputs
+      let reviews = parseReviews(raw);
+
+      // ── Similarity check: if any review is too close to existing ones, retry once ──
+      const avoidPool = [...ONLINE_REVIEWS_TO_AVOID, ...notionReviews, ...sessionReviews];
+      const tooClose = reviews.some(r => isTooSimilar(r, avoidPool));
+      if (tooClose) {
+        document.getElementById('loadingText').textContent = `Refining ${style} style for uniqueness…`;
+        try {
+          const retryResp = await fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: buildPrompt(product, selectedCriteria, style, angleIndex, true) })
+          });
+          if (retryResp.ok) {
+            const retryRaw = await retryResp.json();
+            reviews = parseReviews(retryRaw); // use the refined version regardless
+          }
+        } catch (_) { /* keep original if retry fails */ }
+      }
+
+      // Store in session memory (immediate avoidance) and persist to Notion (cross-session/user)
       reviews.forEach(r => { if (r.title && r.de) sessionReviews.push({ title: r.title, de: r.de }); });
+      saveReviewsToNotion(reviews, product.name, style); // fire-and-forget
       renderPanel('panel-' + style, reviews, product.name, style);
     }
     switchTab('Normal');
