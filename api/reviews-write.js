@@ -47,7 +47,7 @@ async function ensureSchema(apiKey) {
     });
     schemaReady = true;
   } catch (_) {
-    // Schema already exists or insufficient permission — writes still proceed
+    // Schema already exists or insufficient permission â writes still proceed
     schemaReady = true;
   }
 }
@@ -106,10 +106,15 @@ export default async function handler(req, res) {
     const results = await Promise.allSettled(writes);
     const failed = results.filter(r => r.status === 'rejected').length;
 
-    res.status(200).json({
-      ok: true,
-      saved: reviews.length - failed,
+    const saved = reviews.length - failed;
+    const firstError = results.find(r => r.status === 'rejected')?.reason?.message;
+
+    const httpStatus = saved === 0 ? 500 : 200;
+    res.status(httpStatus).json({
+      ok: saved > 0,
+      saved,
       failed,
+      ...(firstError && { error: firstError }),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
