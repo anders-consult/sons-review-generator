@@ -47,7 +47,7 @@ async function ensureSchema(apiKey) {
     });
     schemaReady = true;
   } catch (_) {
-    // Schema already exists or insufficient permission â writes still proceed
+    // Schema already exists or insufficient permission Ã¢ÂÂ writes still proceed
     schemaReady = true;
   }
 }
@@ -92,6 +92,7 @@ export default async function handler(req, res) {
             Style: style ? { select: { name: style } } : undefined,
             'German Text': { rich_text: richText(r.de) },
             'English Text': { rich_text: richText(r.en) },
+            'Created At': { date: { start: new Date().toISOString() } },
           },
         }),
       }).then(async resp => {
